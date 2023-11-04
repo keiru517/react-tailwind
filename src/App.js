@@ -3,7 +3,7 @@ import "./App.css";
 import AuthLayout from "../src/components/Layouts/AuthLayout";
 
 import Home from '../src/pages';
-import File from '../src/pages/file';
+import Chat from '../src/pages/chat';
 
 function App() {
   return (
@@ -11,7 +11,7 @@ function App() {
       <AuthLayout>
         <Routes>
           <Route exact path="/" element={<Home />}></Route>
-          <Route exact path="/file" element={<File />}></Route>
+          <Route exact path="/chat" element={<Chat />}></Route>
         </Routes>
       </AuthLayout>
     </Router>

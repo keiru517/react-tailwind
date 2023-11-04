@@ -1,6 +1,7 @@
 import * as actions from "../actions";
 
 const initialState = {
+  documents: [],
   source_dialog: {
     open: false,
     type: "",
@@ -17,6 +18,12 @@ const index = (state = initialState, action) => {
           type:"create"
         },
       };
+    case actions.GET_DOCUMENTS:
+      return {
+        ...state,
+        documents: action.payload
+      }
+      
     default:
       return state;
   }

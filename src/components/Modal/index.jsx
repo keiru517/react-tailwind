@@ -1,32 +1,107 @@
 import { Fragment, useRef, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import close from "../../assets/img/close.png";
-
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
+import { apis } from "../../utils/apis";
 import * as actions from "../../actions";
+import Select from "../Select";
 import uploadCircle from "../../assets/img/upload-circle.png";
-const Modal = (props) => {
-  const dispatch = useDispatch();
-  const { category } = props;
+import close from "../../assets/img/close.png";
+import pdfIcon from "../../assets/img/pdf.png";
 
+const Modal = (props) => {
+  const { type } = props;
+  const dispatch = useDispatch();
+
+  const options = [
+    { id: 0, name: "Public" },
+    { id: 1, name: "Internal" },
+    { id: 2, name: "Confidential" },
+  ];
   const status = useSelector((state) => state.source_dialog.open);
 
-  // const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("Category");
+  const handleCategory = (e) => {
+    console.log("category", e.name);
+    setCategory(e.name);
+  };
 
   const cancelButtonRef = useRef(null);
-  const fileUploadRef = useRef(undefined);
-  const [chosenFile, setChosenFile] = useState(null);
 
   const closeDialog = () => {
     dispatch({ type: actions.OPEN_ADD_DIALOG, payload: false });
+    setChosenFile(null);
+    setPreviewFileName(null);
+    setCategory("Category");
+    setIsDepth(false);
+    setDepth("");
   };
 
-  const submitFile = () =>{
-    console.log("Submitted file")
+  // File upload part
+  const fileUploadRef = useRef(undefined);
+  const [chosenFile, setChosenFile] = useState(null);
+  const [previewFileName, setPreviewFileName] = useState(null);
+
+  const submitFile = () => {
+
+    const formData = new FormData();
+    formData.append("category", category);
+    formData.append("file", chosenFile)
+    axios.post(apis.uploadFile, formData).then(res=>{
+      alert(res.data.message)
+    }).catch(error=>{
+      alert(error.response.data.message)
+    })
     closeDialog();
-  }
-  const submitUrl = () =>{
-    console.log("Submitted Url")
+  };
+
+  // URL upload part
+  const [isDepth, setIsDepth] = useState(false);
+  const [scrapingOption, setScrapingOption] = useState("Scraping Options");
+  const [depth, setDepth] = useState("");
+  const [url, setUrl] = useState("");
+  const scrapingOptions = [
+    { id: 0, name: "All Pages" },
+    { id: 1, name: "Depth" },
+  ];
+  const handleScrapingOption = (e) => {
+    setScrapingOption(e.name);
+    if (e.name === "Depth") {
+      setIsDepth(true);
+    } else {
+      setIsDepth(false);
+    }
+  };
+
+  const submitUrl = () => {
+    console.log("Submitted Url");
+    console.log("category", category);
+    console.log("scraping Option", scrapingOption);
+    console.log("depth", depth);
+    console.log("url", url);
+
+    closeDialog();
+  };
+
+  // Text upload part
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+
+  const submitText = () => {
+    console.log("category", category);
+    console.log("title", title);
+    console.log("text", text);
+
+    axios.post(apis.uploadText, {
+      category,
+      title,
+      text
+    }).then((res)=>{
+      actions.getDocuments(dispatch);
+      alert(res.data.message);
+    }).catch((error)=>{
+      alert(error.response.data.message);
+    })
     closeDialog();
   }
 
@@ -66,9 +141,9 @@ const Modal = (props) => {
                   <div className="flex items-center text-left h-[88px] justify-between px-default">
                     <p className="text-2xl text-black dark:text-white font-bold">
                       Add{" "}
-                      {category === "File"
+                      {type === "File"
                         ? "File"
-                        : category === "URL"
+                        : type === "URL"
                         ? "URL"
                         : "Text"}
                     </p>
@@ -78,40 +153,122 @@ const Modal = (props) => {
                       className="cursor-pointer hover:opacity-70"
                     ></img>
                   </div>
-                  <div className="flex-col p-default flex flex-grow justify-between">
-                    {category === "File" && (
-                      <div
-                        className="flex w-full h-[86px] bg-light-charcoal dark:bg-charcoal rounded-default items-center cursor-pointer"
-                        onClick={() => {
-                          fileUploadRef.current?.click();
-                        }}
-                      >
-                        <img src={uploadCircle} alt="" className="px-[14px]" />
-                        <p className="dark:text-white font-bold text-sm">
-                          Upload File
-                        </p>
-                        <input
-                          type="file"
-                          ref={fileUploadRef}
-                          hidden
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            if (files.length) {
-                              const file = files[0];
-                              setChosenFile(file);
-                            }
+                  <div className="flex-col p-default flex flex-grow ">
+                    <Select
+                      className="w-[144px] rounded-default text-xs hidden sm:inline h-10"
+                      options={options}
+                      handleClick={handleCategory}
+                      value={category}
+                    >
+                      {category}
+                    </Select>
+                    {type === "File" && (
+                      <div className="flex flex-col flex-grow justify-between">
+                        <div
+                          className="flex w-full h-[86px] bg-light-charcoal dark:bg-charcoal rounded-default items-center cursor-pointer mt-3"
+                          onClick={() => {
+                            fileUploadRef.current?.click();
                           }}
-                        />
+                        >
+                          <img
+                            src={previewFileName ? pdfIcon : uploadCircle}
+                            alt=""
+                            className="px-[14px] w-24 rounded-full"
+                          />
+                          <p className="dark:text-white font-bold text-sm">
+                            {previewFileName ? previewFileName : "Upload File"}
+                          </p>
+                          <input
+                            type="file"
+                            ref={fileUploadRef}
+                            hidden
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files.length) {
+                                const file = files[0];
+                                setChosenFile(file);
+                                setPreviewFileName(file.name);
+                              }
+                            }}
+                          />
+                        </div>
+                        <button
+                          onClick={submitFile}
+                          className="bg-primary rounded-default w-full hover:bg-opacity-70 h-button text-white"
+                        >
+                          Upload
+                        </button>
                       </div>
                     )}
-                    {category === "Url" && <input type="text" />}
+                    {type === "URL" && (
+                      <div className="flex flex-col flex-grow justify-between space-y-3 mt-3">
+                        <div className="flex flex-col space-y-3">
+                          <div className="flex space-x-3">
+                            <Select
+                              className="w-[144px] rounded-default text-xs hidden sm:inline h-10"
+                              options={scrapingOptions}
+                              handleClick={handleScrapingOption}
+                              value={scrapingOption}
+                            >
+                              {scrapingOption}
+                            </Select>
+                            {isDepth && (
+                              <input
+                                type="number"
+                                className="w-[144px] border border-dark-gray rounded-default h-button p-default text-sm"
+                                placeholder="Scraping Depth"
+                                value={depth}
+                                onChange={(e) => setDepth(e.target.value)}
+                              />
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            className="border border-dark-gray rounded-default h-button p-default text-sm"
+                            placeholder="https://example.com"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                          />
+                        </div>
 
-                    <button
-                        onClick={category==="File"?submitFile:submitUrl}
-                        className="bg-primary rounded-default w-full hover:bg-opacity-70 h-button text-white"
-                      >
-                        Upload
-                      </button>
+                        <button
+                          onClick={submitUrl}
+                          className="bg-primary rounded-default w-full hover:bg-opacity-70 h-button text-white"
+                        >
+                          Upload
+                        </button>
+                      </div>
+                    )}
+                    {type === "Text" && (
+                      <div className="flex flex-col flex-grow justify-between space-y-3 mt-3">
+                        <div className="flex flex-col space-y-3">
+                          <div className="flex flex-col space-y-3">
+                            <input
+                              type="text"
+                              className="w-full border border-dark-gray rounded-default h-button p-default text-sm"
+                              placeholder="Title"
+                              value={title}
+                              onChange={(e) => setTitle(e.target.value)}
+                            />
+                            <textarea
+                              name=""
+                              id=""
+                              rows={10}
+                              className="w-full border border-dark-gray rounded-default p-default text-sm resize-none"
+                              placeholder="Add text here"
+                              value={text}
+                              onChange={(e) => setText(e.target.value)}
+                            ></textarea>
+                          </div>
+                        </div>
+                        <button
+                          onClick={submitText}
+                          className="bg-primary rounded-default w-full hover:bg-opacity-70 h-button text-white"
+                        >
+                          Upload
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Dialog.Panel>
