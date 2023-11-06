@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Modal from "../components/Modal";
 import Select from "../components/Select";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import * as actions from "../actions";
 
 function Home() {
   const dispatch = useDispatch();
+  const documents = useSelector(state=>state.documents);
+
   const [type, setType] = useState("Add");
 
   const options = [
@@ -33,7 +35,7 @@ function Home() {
       <div className="grid grid-cols-3 mt-10 gap-3">
         <div className="col-span-2">
           <div className="flex flex-col">
-            <div className="flex justify-end">
+            <div className="flex justify-end mb-3">
               <Select
                 className="w-[144px] rounded-default text-xs hidden sm:inline h-10"
                 options={options}
@@ -43,7 +45,7 @@ function Home() {
                 {type}
               </Select>
             </div>
-            <Table />
+            <Table documents={documents}/>
           </div>
         </div>
       </div>

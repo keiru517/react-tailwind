@@ -5,9 +5,12 @@ import axios from "axios";
 import { apis } from "../../utils/apis";
 import * as actions from "../../actions";
 import Select from "../Select";
+import Checkbox from "../Checkbox";
 import uploadCircle from "../../assets/img/upload-circle.png";
 import close from "../../assets/img/close.png";
 import pdfIcon from "../../assets/img/pdf.png";
+import checkedIcon from "../../assets/img/checked.png";
+import uncheckedIcon from "../../assets/img/unchecked.png";
 
 const Modal = (props) => {
   const { type } = props;
@@ -24,34 +27,45 @@ const Modal = (props) => {
   const handleCategory = (e) => {
     console.log("category", e.name);
     setCategory(e.name);
+    setWarning(false);
   };
 
   const cancelButtonRef = useRef(null);
 
   const closeDialog = () => {
     dispatch({ type: actions.OPEN_ADD_DIALOG, payload: false });
+    setCategory("Category");
     setChosenFile(null);
     setPreviewFileName(null);
-    setCategory("Category");
     setIsDepth(false);
     setDepth("");
+    setUrl("");
+    setLinks({});
+    setItemsChecked({});
+    setTitle("");
+    setText("");
+    setWarning(false);
   };
 
+  const [warning, setWarning] = useState(false);
   // File upload part
   const fileUploadRef = useRef(undefined);
   const [chosenFile, setChosenFile] = useState(null);
   const [previewFileName, setPreviewFileName] = useState(null);
 
   const submitFile = () => {
-
     const formData = new FormData();
     formData.append("category", category);
-    formData.append("file", chosenFile)
-    axios.post(apis.uploadFile, formData).then(res=>{
-      alert(res.data.message)
-    }).catch(error=>{
-      alert(error.response.data.message)
-    })
+    formData.append("file", chosenFile);
+    axios
+      .post(apis.uploadFile, formData)
+      .then((res) => {
+        actions.getDocuments(dispatch);
+        alert(res.data.message);
+      })
+      .catch((error) => {
+        alert(error.response.data.message);
+      });
     closeDialog();
   };
 
@@ -60,6 +74,15 @@ const Modal = (props) => {
   const [scrapingOption, setScrapingOption] = useState("Scraping Options");
   const [depth, setDepth] = useState("");
   const [url, setUrl] = useState("");
+  const [links, setLinks] = useState({});
+  const [itemsChecked, setItemsChecked] = useState({});
+
+  const setListItemChecked = (id, link, checked) => {
+    let temp = { ...itemsChecked };
+    temp[id] = { ...temp[id], checked: checked };
+    setItemsChecked(temp);
+  };
+
   const scrapingOptions = [
     { id: 0, name: "All Pages" },
     { id: 1, name: "Depth" },
@@ -73,6 +96,29 @@ const Modal = (props) => {
     }
   };
 
+  const getLinks = () => {
+    const formData = new FormData();
+    formData.append("option", scrapingOption);
+    formData.append("depth", depth);
+    formData.append("url", url);
+
+    axios
+      .post(apis.getLinks, formData)
+      .then((res) => {
+        let links = res.data.links;
+        let updatedLinks = {};
+        Object.keys(links).map((link, id) => {
+          updatedLinks[id] = { link, checked: false, scraped: false };
+        });
+        console.log("updatdLinks", updatedLinks);
+        setLinks(updatedLinks);
+        setItemsChecked(updatedLinks);
+      })
+      .catch((error) => {
+        console.log(error.response.data.message);
+      });
+  };
+
   const submitUrl = () => {
     console.log("Submitted Url");
     console.log("category", category);
@@ -80,7 +126,74 @@ const Modal = (props) => {
     console.log("depth", depth);
     console.log("url", url);
 
-    closeDialog();
+    if (category === "Category") {
+      setWarning(true);
+    } else {
+      let text = "";
+      console.log(itemsChecked);
+
+      // Object.values(itemsChecked)
+      //   .map((item, id) => {
+      //     if (item.checked) {
+      //       let formData = new FormData();
+      //       formData.append("category", category);
+      //       formData.append("link", item.link);
+      //       axios
+      //         .post(apis.scrape, formData)
+      //         .then((res) => {
+      //           let tempLinks = { ...links };
+      //           tempLinks[id].scraped = true;
+      //           //  = { ...tempLinks[id], scraped: true };
+      //           setLinks(tempLinks);
+      //           text += res.data.text;
+      //         })
+      //         .catch((error) => {
+      //           alert("Error occurred!")
+      //         });
+      //     }
+      //   });
+      fetchData().then((res)=>{
+        text = res.text;
+        let formData = new FormData();
+        formData.append("category", category);
+        formData.append("url", url);
+        formData.append("text", text);
+  
+        axios.post(apis.uploadUrl, formData).then(res=>{
+          actions.getDocuments(dispatch);
+        }).catch(error=>{
+          console.log(error)
+        });
+        closeDialog();
+      }).catch(error=>{
+        alert("Error occurred!")
+      });
+    }
+  };
+
+  const fetchData = async () => {
+    let text = ""
+    for (const [id, item] of Object.entries(itemsChecked)) {
+      if (item.checked) {
+        let formData = new FormData();
+        formData.append('category', category);
+        formData.append('link', item.link);
+  
+        try {
+          const res = await axios.post(apis.scrape, formData);
+          let tempLinks = { ...links };
+          tempLinks[id].scraped = true;
+          // tempLinks[id] = { ...tempLinks[id], scraped: true };
+          setLinks(tempLinks);
+          console.log(tempLinks)
+          text += res.data.text;
+        } catch (error) {
+          console.error("An error occurred:", error);
+          alert("Error occurred");
+        }
+      }
+    }
+    return {text};
   };
 
   // Text upload part
@@ -88,22 +201,26 @@ const Modal = (props) => {
   const [text, setText] = useState("");
 
   const submitText = () => {
-    console.log("category", category);
-    console.log("title", title);
-    console.log("text", text);
+    const formData = new FormData();
+    formData.append("category", category);
+    formData.append("title", title);
+    formData.append("text", text);
 
-    axios.post(apis.uploadText, {
-      category,
-      title,
-      text
-    }).then((res)=>{
-      actions.getDocuments(dispatch);
-      alert(res.data.message);
-    }).catch((error)=>{
-      alert(error.response.data.message);
-    })
-    closeDialog();
-  }
+    if (category === "Category") {
+      setWarning(true);
+    } else {
+      axios
+        .post(apis.uploadText, formData)
+        .then((res) => {
+          actions.getDocuments(dispatch);
+          alert(res.data.message);
+        })
+        .catch((error) => {
+          alert(error.response.data.message);
+        });
+      closeDialog();
+    }
+  };
 
   return (
     <Transition.Root show={status} as={Fragment}>
@@ -155,7 +272,9 @@ const Modal = (props) => {
                   </div>
                   <div className="flex-col p-default flex flex-grow ">
                     <Select
-                      className="w-[144px] rounded-default text-xs hidden sm:inline h-10"
+                      className={`${
+                        warning ? "border border-red-500" : ""
+                      } w-[144px] rounded-default text-xs hidden sm:inline h-10`}
                       options={options}
                       handleClick={handleCategory}
                       value={category}
@@ -205,7 +324,7 @@ const Modal = (props) => {
                         <div className="flex flex-col space-y-3">
                           <div className="flex space-x-3">
                             <Select
-                              className="w-[144px] rounded-default text-xs hidden sm:inline h-10"
+                              className="w-[295px] rounded-default text-xs hidden sm:inline h-10"
                               options={scrapingOptions}
                               handleClick={handleScrapingOption}
                               value={scrapingOption}
@@ -215,22 +334,93 @@ const Modal = (props) => {
                             {isDepth && (
                               <input
                                 type="number"
-                                className="w-[144px] border border-dark-gray rounded-default h-button p-default text-sm"
+                                className="w-[100px] border border-dark-gray rounded-default h-button p-default text-sm"
                                 placeholder="Scraping Depth"
                                 value={depth}
                                 onChange={(e) => setDepth(e.target.value)}
                               />
                             )}
+                            <input
+                              type="text"
+                              className="w-[700px] border border-dark-gray rounded-default h-button p-default text-sm"
+                              placeholder="https://example.com"
+                              value={url}
+                              onChange={(e) => setUrl(e.target.value)}
+                            />
+                            <button
+                              className="bg-success rounded-default w-[200px] hover:bg-opacity-70 h-button text-white"
+                              onClick={getLinks}
+                            >
+                              Get Sublinks
+                            </button>
                           </div>
-                          <input
-                            type="text"
-                            className="border border-dark-gray rounded-default h-button p-default text-sm"
-                            placeholder="https://example.com"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                          />
+                          <div className="relative overflow-x-auto shadow-md sm:rounded-lg h-[320px]">
+                            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                              <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                  <th scope="col" className="px-6 py-3">
+                                    {/* <Checkbox
+                                      name="name"
+                                      // checked={!!itemChecked[player.id]}
+                                      // onChange={(checked) => {
+                                      //   setListItemChecked(
+                                      //     player.id,
+                                      //     checked
+                                      //   );
+                                      // }}
+                                    /> */}
+                                  </th>
+                                  <th scope="col" className="px-6 py-3">
+                                    Link
+                                  </th>
+                                  <th scope="col" className="px-6 py-3">
+                                    Status
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {links !== {} &&
+                                  Object.values(links).map((link, id) => (
+                                    <tr
+                                      key={id}
+                                      className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                                    >
+                                      <td
+                                        scope="row"
+                                        className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
+                                      >
+                                        <Checkbox
+                                          name="name"
+                                          checked={!!itemsChecked[id]?.checked}
+                                          onChange={(checked) => {
+                                            setListItemChecked(
+                                              id,
+                                              link,
+                                              checked
+                                            );
+                                          }}
+                                        />
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        {link?.link}
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <img
+                                          src={
+                                            link?.scraped
+                                              ? checkedIcon
+                                              : uncheckedIcon
+                                          }
+                                          alt=""
+                                          className="w-5 h-5"
+                                        />
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
-
                         <button
                           onClick={submitUrl}
                           className="bg-primary rounded-default w-full hover:bg-opacity-70 h-button text-white"
@@ -245,7 +435,7 @@ const Modal = (props) => {
                           <div className="flex flex-col space-y-3">
                             <input
                               type="text"
-                              className="w-full border border-dark-gray rounded-default h-button p-default text-sm"
+                              className={`w-full border border-dark-gray rounded-default h-button p-default text-sm`}
                               placeholder="Title"
                               value={title}
                               onChange={(e) => setTitle(e.target.value)}
@@ -254,7 +444,7 @@ const Modal = (props) => {
                               name=""
                               id=""
                               rows={10}
-                              className="w-full border border-dark-gray rounded-default p-default text-sm resize-none"
+                              className={`w-full border border-dark-gray rounded-default p-default text-sm resize-none`}
                               placeholder="Add text here"
                               value={text}
                               onChange={(e) => setText(e.target.value)}

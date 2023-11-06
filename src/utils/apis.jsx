@@ -6,5 +6,7 @@ export const apis = {
     uploadUrl: apiUrl + "/upload_url",
     uploadText: apiUrl + "/upload_text",
     ask: apiUrl + "/ask",
-    delete: apiUrl + "/delete"
+    delete: apiUrl + "/delete",
+    getLinks: apiUrl + "/get_links",
+    scrape: apiUrl + "/scrape"
 }

@@ -3,7 +3,6 @@ import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const pathName = window.location.pathname;
-console.log("pathName", pathName);
 
 const navigation = [
   { name: "Dashboard", href: "/", current: pathName === "/" ? true : false },
