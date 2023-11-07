@@ -41,9 +41,9 @@ export default function Chat() {
       .then((res) => {
         const response = res.data.answer;
         console.log(response);
-        const resTemp = [...chatHistory];
-        temp.push({ ai: response });
-        setChatHistory(temp);
+        const resTemp = [...temp];
+        resTemp.push({ ai: response });
+        setChatHistory(resTemp);
       })
       .catch((error) => {
         console.log("Error occurred!");
