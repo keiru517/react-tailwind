@@ -19,7 +19,7 @@ export default function Chat() {
     { id: 1, name: "Internal" },
     { id: 2, name: "Confidential" },
   ];
-  const [category, setCategory] = useState("Public")
+  const [category, setCategory] = useState("Category")
   const handleCategory = (e) => {
     setCategory(e.name);
   }

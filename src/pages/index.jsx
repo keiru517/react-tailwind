@@ -32,8 +32,8 @@ function Home() {
       <p className="text-black dark:text-white text-3xl">
         Let's build our knowledge database together!
       </p>
-      <div className="grid grid-cols-3 mt-10 gap-3">
-        <div className="col-span-2">
+      <div className="mt-10 gap-3">
+        <div className="">
           <div className="flex flex-col">
             <div className="flex justify-end mb-3">
               <Select
